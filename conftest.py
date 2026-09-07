@@ -12,38 +12,30 @@ BASE_URL = os.getenv("BASE_URL")
 
 @pytest.fixture
 def courier():
-    # TODO: сгенерируйте уникальный логин курьера.
-    # Например, используйте uuid.
-    login = f"TODO_{uuid.uuid4().hex[:8]}"
-
-    courier_data = {
-        "login": login,
+    """
+    Фикстура создаёт уникального курьера перед тестом
+    и удаляет его после завершения.
+    """
+    # Генерация уникальных данных
+    unique_login = f"courier_{uuid.uuid4().hex[:8]}"
+    data = {
+        "login": unique_login,
         "password": "1234",
-        "firstName": "Test",
+        "firstName": "Test"
     }
 
-    # TODO: создайте курьера через POST /api/v1/courier.
-    # Сохраните ответ, чтобы убедиться, что создание прошло успешно.
-    response = requests.post(
-        f"{BASE_URL}/api/v1/courier",
-        json=courier_data,
+    # Создание курьера через API
+    create_response = requests.post(f"{BASE_URL}/api/v1/courier", json=data)
+    assert create_response.status_code == 201, "Не удалось создать курьера"
+
+    yield data  # передаем данные в тест
+
+    # Удаление курьера после теста
+    login_response = requests.post(
+        f"{BASE_URL}/api/v1/courier/login",
+        json={"login": data["login"], "password": data["password"]}
     )
 
-    # TODO: получите id созданного курьера.
-    # Для этого используйте POST /api/v1/courier/login
-    # с login и password из courier_data.
-    #
-    # login_response = requests.post(...)
-    # courier_id = login_response.json()["id"]
-
-    courier_id = None
-
-    # TODO: передайте в тест данные, необходимые для авторизации.
-    yield {
-        "login": courier_data["login"],
-        "password": courier_data["password"],
-        "id": courier_id,
-    }
-
-    # TODO: после завершения теста удалите созданного курьера.
-    # DELETE /api/v1/courier/{id}
+    if login_response.status_code == 200:
+        courier_id = login_response.json()["id"]
+        requests.delete(f"{BASE_URL}/api/v1/courier/{courier_id}")
